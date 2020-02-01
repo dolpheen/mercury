@@ -10,6 +10,7 @@ npm install
 **Примеры запуска**
 
 *node app.js --type=230 --serial=13067832 --adapterUrl=usriot://192.168.1.100:8089 --count=200 --freq=60*
+
 *node app.js --type=206 --serial=27361775 --adapterUrl=usriot://192.168.1.100:8089 --count=200 --freq=60*
 
 где
