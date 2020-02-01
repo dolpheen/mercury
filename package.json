@@ -1,0 +1,27 @@
+{
+  "name": "p01022020electro",
+  "version": "1.0.0",
+  "description": "Test utility for Mercury devices",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dolpheen/mercury.git"
+  },
+  "keywords": [
+    "power",
+    "consumption",
+    "mercury"
+  ],
+  "author": "dolpheen",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/dolpheen/mercury/issues"
+  },
+  "homepage": "https://github.com/dolpheen/mercury#readme",
+  "dependencies": {
+    "yargs": "^15.1.0"
+  }
+}
