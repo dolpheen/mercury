@@ -110,7 +110,7 @@ client.connect(converterPort, converterIp, async function () {
     if (type == '206') {
         // Find real network address of the electric counter     
         address = Buffer.alloc(4);   
-        address.writeUInt32BE(27361775);
+        address.writeUInt32BE(serial);
 
         // var req = constructRequest(address1, [0x27]);
         // client.write(req);
