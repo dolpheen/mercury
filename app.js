@@ -38,12 +38,12 @@ if (!argv.adapterUrl) {
 
 // Total requests for the test
 var totalRequests = 100;
-if(argv.count){
+if (argv.count) {
     totalRequests = parseInt(argv.count);
 }
 // Requests per minute
-var freq = 1;
-if(argv.count){
+var freq = 60;
+if (argv.count) {
     freq = parseInt(argv.freq);
 }
 
@@ -78,45 +78,81 @@ client.connect(converterPort, converterIp, async function () {
             serial = serial.substr(1);
         }
         address = Buffer.from([parseInt(serial)]);
-    }
-    //var address1 = Buffer.from([32]);
 
-    //var address2 = Buffer.alloc(4);
-    //address2.writeUInt32BE(27361775);
+        //address2.writeUInt32BE(27361775);
 
-    // var req = constructRequest(address1, [0x27]);
-    // client.write(req);
+        // var req = constructRequest(address1, [0x27]);
+        // client.write(req);
 
-    // Test connection
-    console.log('Проверка соединения...');
-    currentCmd = m230_Test_Channel;
-    var req = constructRequest(address, currentCmd);
-    client.write(req);
-
-    // Open channel 
-    await msleep(100);
-    console.log('Открытие канала...');
-    currentCmd = m230_Open_Channel;
-    req = constructRequest(address, currentCmd, [m230_level_2, ...m230_level2_password]);
-    client.write(req);
-
-    // Read Energy 
-    for (i = 0; i < 30000; i++) {
-        await msleep(60000/freq);
-        console.log(`${i + 1}. Чтение данных...`);
-        currentCmd = m230_Read_Energy_Param;
-        req = constructRequest(address, currentCmd, [0x00, 0x00]);
+        // Test connection
+        console.log('Проверка соединения...');
+        currentCmd = m230_Test_Channel;
+        var req = constructRequest(address, currentCmd);
         client.write(req);
+
+        // Open channel 
+        await msleep(100);
+        console.log('Открытие канала...');
+        currentCmd = m230_Open_Channel;
+        req = constructRequest(address, currentCmd, [m230_level_2, ...m230_level2_password]);
+        client.write(req);
+
+        // Read Energy 
+        for (i = 0; i < totalRequests; i++) {
+            await msleep(60000 / freq);
+            console.log(`${i + 1}. Чтение данных...`);
+            currentCmd = m230_Read_Energy_Param;
+            req = constructRequest(address, currentCmd, [0x00, 0x00]);
+            client.write(req);
+        }
     }
 
+    if (type == '206') {
+        // Find real network address of the electric counter     
+        address = Buffer.alloc(4);   
+        address.writeUInt32BE(27361775);
+
+        // var req = constructRequest(address1, [0x27]);
+        // client.write(req);
+        // Read Energy 
+        for (i = 0; i < totalRequests; i++) {
+            await msleep(60000 / freq);
+            console.log(`${i + 1}. Чтение данных...`);
+            currentCmd = m230_Read_Energy_Param;
+            req = constructRequest(address, 0x27);
+            client.write(req);
+        }
+    }
+    console.log('Конец теста');
+    process.exit();
 });
 
 client.on('data', function (data) {
-    console.log('Получены данные от счетчика: ' + data.toString('hex'));
-    if (currentCmd == m230_Read_Energy_Param) {
+    // Calculate CRC
+    var crcActual = data.readUInt16LE(data.length - 2);
+    var crcCalc = crc16MODBUS(data.slice(0, data.length - 2));
+    console.log('Получены данные от счетчика: ' + data.toString('hex') + ' CRC:' + `${crcActual == crcCalc ? 'OK' : 'NOK'}`);
+    if (currentCmd == m230_Read_Energy_Param && type == '230') {
         var tempBuffer = Buffer.from([data[2], data[1], data[4], data[3]]);
         var energyValue = tempBuffer.readUInt32BE();
         console.log('Энергия по сумме тарифов: ' + energyValue / 1000 + ' кВт·ч');
+    }
+
+    if (currentCmd == m230_Read_Energy_Param && type == '206') {
+        var tarif1 = data.readUInt32BE(5);
+        var tarif1String = ((tarif1 & 0xffffff00) >> 8).toString(16) + '.' + (tarif1 & 0xff).toString(16);
+
+        var tarif2 = data.readUInt32BE(9);
+        var tarif2String = ((tarif2 & 0xffffff00) >> 8).toString(16) + '.' + (tarif2 & 0xff).toString(16);
+
+        var tarif3 = data.readUInt32BE(13);
+        var tarif3String = ((tarif3 & 0xffffff00) >> 8).toString(16) + '.' + (tarif3 & 0xff).toString(16);
+
+        var tarif4 = data.readUInt32BE(13);
+        var tarif4String = ((tarif4 & 0xffffff00) >> 8).toString(16) + '.' + (tarif4 & 0xff).toString(16);
+        
+        //var tarif2 = data.readUInt32BE(4);
+        console.log(`Энергия T1: ${tarif1String} кВт·ч, T2: ${tarif2String} кВт·ч, T3: ${tarif3String} кВт·ч, T4: ${tarif4String} кВт·ч`);
     }
     console.log('');
 });
